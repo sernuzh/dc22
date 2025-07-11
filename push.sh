@@ -7,5 +7,5 @@
 commit_message=$(date +"%Y-%m-%d-%H-%M")
 
 git add .
-git commit -m "$commit_message"
+git commit -m commit_message
 git push https://sernuzh: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@github.com/sernuzh/dc22.git main --force
