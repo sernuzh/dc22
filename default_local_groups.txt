@@ -1,0 +1,141 @@
+
+You said:
+Have default local group - Administrators on domain controller the rights on another clients in domain such as win 10
+
+When a server become DC are its groups locked or they still work
+
+Can administrator of DC log in to remote computer as guest
+ChatGPT said:
+
+Let's break your questions down one by one:
+1. Does the default local group "Administrators" on a domain controller have rights on client machines (like Windows 10)?
+
+No, not by default.
+
+    The local "Administrators" group on a domain controller (e.g. dc22) only applies to that DC, and it doesn’t automatically give privileges on domain member computers (like Windows 10 machines).
+
+    On Windows 10 clients, the local Administrators group can include domain accounts or groups (e.g., DOMAIN\Domain Admins) to give them admin rights on that machine.
+
+✅ To ensure DC admins have local admin rights on clients:
+
+    You should add a domain group like Domain Admins to the local Administrators group on clients.
+
+    This is usually done via Group Policy:
+
+        Computer Configuration > Policies > Windows Settings > Security Settings > Restricted Groups or Group Policy Preferences.
+
+2. When a server becomes a Domain Controller, are its local groups locked or still functional?
+
+✅ They are transformed and partially "locked":
+
+    When a machine is promoted to a DC:
+
+        Local user accounts and local groups are removed.
+
+        It now operates using Active Directory groups, such as:
+
+            Domain Admins
+
+            Enterprise Admins
+
+            Administrators (now a domain-level group, not local)
+
+    So the "Administrators" group still exists, but it's now a domain group, not a local one.
+
+    You cannot create or manage local users or local groups on a DC anymore — everything is managed via Active Directory.
+
+3. Can a Domain Controller Administrator log into a remote computer as Guest?
+
+Technically, no, and usually not advisable:
+
+    A DC admin (e.g., a member of Domain Admins) can log in to any domain-joined computer with full admin rights — but not as "Guest".
+
+    The Guest account is a local, very limited account and is usually disabled by default.
+
+    A DC admin should not use Guest — and usually cannot, unless:
+
+        Guest is explicitly enabled.
+
+        Password is set.
+
+        Group policies allow it.
+
+🛑 Logging in as Guest would:
+
+    Bypass auditing and security logs for real admin activity.
+
+    Violate best practices.
+
+    Be blocked in hardened environments.
+
+✅ Summary:
+Question	Answer
+Do DC "Administrators" have rights on clients?	❌ No, unless added to local groups or via GPO.
+Are local groups on DC still functional?	🔒 No, they are replaced by domain groups.
+Can DC admin log in as Guest?	🚫 Not by default, and it's not recommended.
+
+Let me know if you want to automate granting admin rights on clients via Group Policy.
+You said:
+Ok. Then why having enterprise admin account and logging in to the child domain or even to the root DC I get warning that asks permissions to run server manager
+ChatGPT said:
+
+Great question — and yes, this can be confusing.
+
+You're an Enterprise Admin (EA), which is the highest-level group in an Active Directory forest, but when you log in — even to a Domain Controller — you still see a UAC (User Account Control) prompt asking for permission to run tools like Server Manager or GPMC?
+
+Let’s break down why this happens:
+🔒 Why You're Getting UAC Prompts Even as Enterprise Admin
+
+    UAC Applies to All Admins by Design (Since Windows Vista / Server 2008):
+
+        Even if you're in Domain Admins, Enterprise Admins, or Administrators, UAC splits your session into:
+
+            A standard user token (used by default).
+
+            An elevated admin token (used only when you explicitly approve elevation).
+
+        That’s why Server Manager, PowerShell (admin), and others prompt you with "Do you want to allow this app...?"
+
+    Enterprise Admin ≠ Automatic Elevation
+
+        Being an Enterprise Admin doesn’t mean UAC is turned off or that elevation happens silently.
+
+        By default, UAC protects even high-privilege accounts on servers, including domain controllers.
+
+        It's a security feature, not a permissions issue.
+
+    Server Manager is an Admin Tool — Requires Elevation
+
+        Tools like Server Manager, GPMC, etc. require elevated privileges to modify system settings.
+
+        Windows doesn't run them elevated unless you confirm via UAC.
+
+⚙️ How to Reduce or Manage This Behavior
+
+If you don’t want to be prompted every time, here are a few options (not all recommended for production):
+✅ 1. Run tools explicitly as Administrator
+
+    Right-click → “Run as administrator”
+
+⚠️ 2. Disable UAC for Admins via Group Policy (not recommended on DCs)
+
+    GPO setting:
+    Computer Configuration > Windows Settings > Security Settings > Local Policies > Security Options >
+
+        User Account Control: Behavior of the elevation prompt for administrators in Admin Approval Mode → Set to: Elevate without prompting
+
+        User Account Control: Run all administrators in Admin Approval Mode → Disable (disables UAC entirely)
+
+    ❗ WARNING: Disabling UAC on Domain Controllers is not recommended in production. It can weaken security and violate best practices.
+
+✅ 3. Use a PowerShell session with elevation
+
+Start-Process powershell.exe -Verb runAs
+
+💡 TL;DR
+Issue	Explanation
+UAC prompt even as Enterprise Admin	Normal, expected, security by design
+Why?	UAC separates standard and admin tokens for all users
+Fix?	Use “Run as administrator” or adjust UAC (cautiously)
+
+

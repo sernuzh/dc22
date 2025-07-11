@@ -1,0 +1,2 @@
+powershell -command "Stop-Computer"
+
